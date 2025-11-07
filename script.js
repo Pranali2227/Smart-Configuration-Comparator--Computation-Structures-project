@@ -35,20 +35,37 @@ async function extractTextFromFile(file) {
         } else if (ext === 'pptx') {
             text = "PPTX text extraction not fully supported in browser. Please use server-side processing.";
         } else if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(ext)) {
-            // Resize image for faster OCR
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            await new Promise(resolve => img.onload = resolve);
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const maxWidth = 800;
-            const scale = Math.min(1, maxWidth / img.width);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const resizedFile = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
-            const { data: { text: ocrText } } = await Tesseract.recognize(resizedFile, 'eng', { logger: m => console.log(m) });
-            text = ocrText;
+            try {
+                // Load image
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+
+                // Resize image for faster OCR if too large
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const maxWidth = 1200; // Increased for better accuracy
+                const scale = Math.min(1, maxWidth / img.width);
+                canvas.width = img.width * scale;
+                canvas.height = img.height * scale;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                // Convert to blob
+                const resizedBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+
+                // Perform OCR
+                const result = await Tesseract.recognize(resizedBlob, 'eng', {
+                    logger: m => console.log(m),
+                    tessedit_pageseg_mode: Tesseract.PSM_AUTO, // Auto page segmentation
+                    tessedit_ocr_engine_mode: Tesseract.OEM_DEFAULT // Default OCR engine
+                });
+                text = result.data.text;
+            } catch (ocrError) {
+                text = `OCR failed: ${ocrError.message}`;
+            }
         }
     } catch (error) {
         text = `Error extracting text: ${error.message}`;
