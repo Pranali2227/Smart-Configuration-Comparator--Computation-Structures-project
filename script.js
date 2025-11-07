@@ -80,20 +80,26 @@ function compareTexts(text1, text2) {
     const normText1 = normalize(text1);
     const normText2 = normalize(text2);
 
-    // Use diff library for better diff
-    const patches = Diff.diffWords(normText1, normText2);
+    // Use difflib for better diff
+    const d = new difflib.SequenceMatcher(null, normText1.split(/\s+/), normText2.split(/\s+/));
+    const diff = d.get_opcodes();
 
     let similarities = [];
     let file1Diff = [];
     let file2Diff = [];
 
-    patches.forEach(patch => {
-        if (patch.added) {
-            file2Diff.push(`+ ${patch.value.trim()}`);
-        } else if (patch.removed) {
-            file1Diff.push(`- ${patch.value.trim()}`);
-        } else {
-            similarities.push(patch.value.trim());
+    diff.forEach(([tag, i1, i2, j1, j2]) => {
+        const seq1 = normText1.split(/\s+/).slice(i1, i2).join(' ');
+        const seq2 = normText2.split(/\s+/).slice(j1, j2).join(' ');
+        if (tag === 'equal') {
+            similarities.push(seq1);
+        } else if (tag === 'replace') {
+            file1Diff.push(`- ${seq1}`);
+            file2Diff.push(`+ ${seq2}`);
+        } else if (tag === 'delete') {
+            file1Diff.push(`- ${seq1}`);
+        } else if (tag === 'insert') {
+            file2Diff.push(`+ ${seq2}`);
         }
     });
 
