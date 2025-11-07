@@ -151,7 +151,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file1.name.split('.').pop().toLowerCase())) {
                 const img1 = document.createElement('img');
                 img1.src = URL.createObjectURL(file1);
-                img1.style.maxWidth = '300px';
+                img1.style.maxWidth = '200px';
                 img1.style.height = 'auto';
                 file1ContentDiv.appendChild(img1);
             }
@@ -162,7 +162,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file2.name.split('.').pop().toLowerCase())) {
                 const img2 = document.createElement('img');
                 img2.src = URL.createObjectURL(file2);
-                img2.style.maxWidth = '300px';
+                img2.style.maxWidth = '200px';
                 img2.style.height = 'auto';
                 file2ContentDiv.appendChild(img2);
             }

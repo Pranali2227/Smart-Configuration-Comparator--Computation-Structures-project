@@ -22,7 +22,9 @@ def extract_text_from_file(file_path, file_ext):
     if file_ext == '.pdf':
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
-                text += page.extract_text() + "\n"
+                page_text = page.extract_text()
+                if page_text:  # Only add if text is extracted
+                    text += page_text + "\n"
     elif file_ext in ['.doc', '.docx']:
         doc = Document(file_path)
         for para in doc.paragraphs:
@@ -31,7 +33,9 @@ def extract_text_from_file(file_path, file_ext):
         wb = openpyxl.load_workbook(file_path)
         for sheet in wb:
             for row in sheet.iter_rows(values_only=True):
-                text += " ".join([str(cell) for cell in row if cell]) + "\n"
+                row_text = " ".join([str(cell) for cell in row if cell])
+                if row_text.strip():
+                    text += row_text + "\n"
     elif file_ext in ['.ppt', '.pptx']:
         prs = Presentation(file_path)
         for slide in prs.slides:
@@ -51,27 +55,39 @@ def extract_text_from_file(file_path, file_ext):
             text = f"Error extracting text from image: {str(e)}"
     return text.strip()
 
+def format_tabular(text):
+    lines = text.split('\n')
+    formatted = []
+    for line in lines:
+        if line.strip():
+            parts = line.split()
+            if len(parts) > 1:
+                formatted.append('| ' + ' | '.join(parts) + ' |')
+            else:
+                formatted.append(line)
+    return '\n'.join(formatted)
+
 def compare_texts(text1, text2):
     # Normalize text: convert to lowercase for case-insensitive comparison
-    normalize = lambda text: text.lower().strip().replace('\s+', ' ')
+    normalize = lambda text: text.lower().strip()
     norm_text1 = normalize(text1)
     norm_text2 = normalize(text2)
 
-    # Simple word-based comparison
-    words1 = norm_text1.split()
-    words2 = norm_text2.split()
-
-    # Find common words
-    common = list(set(words1) & set(words2))
-    similarities = ' '.join(common)
-
-    # Find differences
-    diff1 = [word for word in words1 if word not in words2]
-    diff2 = [word for word in words2 if word not in words1]
-
-    file1_diff = '\n'.join(f'- {word}' for word in diff1)
-    file2_diff = '\n'.join(f'+ {word}' for word in diff2)
-
+    # Use difflib for better line-based diff
+    diff = list(difflib.unified_diff(norm_text1.splitlines(keepends=True), norm_text2.splitlines(keepends=True), fromfile='File 1', tofile='File 2', lineterm=''))
+    similarities = []
+    file1_diff = []
+    file2_diff = []
+    for line in diff:
+        if line.startswith(' '):
+            similarities.append(line[1:])
+        elif line.startswith('-'):
+            file1_diff.append(line)
+        elif line.startswith('+'):
+            file2_diff.append(line)
+    similarities = '\n'.join(similarities).strip()
+    file1_diff = '\n'.join(file1_diff).strip()
+    file2_diff = '\n'.join(file2_diff).strip()
     return similarities, file1_diff, file2_diff
 
 @app.route('/')
@@ -105,6 +121,12 @@ def compare():
         similarities, file1_diff, file2_diff = compare_texts(text1, text2)
         file1_url = f"/static/uploads/{file1.filename}" if ext1 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
         file2_url = f"/static/uploads/{file2.filename}" if ext2 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
+        # Format tabular data for XLSX
+        if ext1 in ['.xls', '.xlsx']:
+            text1 = format_tabular(text1)
+        if ext2 in ['.xls', '.xlsx']:
+            text2 = format_tabular(text2)
+
         return jsonify({
             'file1_content': text1,
             'file2_content': text2,
