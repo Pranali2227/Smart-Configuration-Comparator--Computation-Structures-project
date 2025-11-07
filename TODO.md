@@ -1,9 +1,8 @@
-# TODO List for File Comparison Website
+# TODO List for Deploying Flask App to Heroku
 
-- [x] Create requirements.txt with dependencies (Flask, pdfplumber, python-docx, openpyxl, python-pptx, pytesseract, Pillow, difflib)
-- [x] Create app.py with Flask app, upload route, comparison logic for various file types including OCR for images
-- [x] Create templates/index.html with file upload form and results display
-- [x] Create static/css/style.css for basic styling
-- [x] Create static/js/script.js for client-side enhancements (optional)
-- [x] Install requirements using pip
-- [x] Run the Flask app and test functionality
+- [x] Update app.py for production (host 0.0.0.0, port from env)
+- [x] Create Procfile for Heroku
+- [x] Install Heroku CLI
+- [x] Create Heroku app
+- [ ] Push code to Heroku
+- [ ] Test deployed app
