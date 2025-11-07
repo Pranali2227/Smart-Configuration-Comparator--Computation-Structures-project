@@ -80,33 +80,29 @@ function compareTexts(text1, text2) {
     const normText1 = normalize(text1);
     const normText2 = normalize(text2);
 
-    // Use difflib for better diff
-    const d = new difflib.SequenceMatcher(null, normText1.split(/\s+/), normText2.split(/\s+/));
-    const diff = d.get_opcodes();
+    // Simple word-based comparison
+    const words1 = normText1.split(/\s+/);
+    const words2 = normText2.split(/\s+/);
 
     let similarities = [];
     let file1Diff = [];
     let file2Diff = [];
 
-    diff.forEach(([tag, i1, i2, j1, j2]) => {
-        const seq1 = normText1.split(/\s+/).slice(i1, i2).join(' ');
-        const seq2 = normText2.split(/\s+/).slice(j1, j2).join(' ');
-        if (tag === 'equal') {
-            similarities.push(seq1);
-        } else if (tag === 'replace') {
-            file1Diff.push(`- ${seq1}`);
-            file2Diff.push(`+ ${seq2}`);
-        } else if (tag === 'delete') {
-            file1Diff.push(`- ${seq1}`);
-        } else if (tag === 'insert') {
-            file2Diff.push(`+ ${seq2}`);
-        }
-    });
+    // Find common words
+    const common = words1.filter(word => words2.includes(word));
+    similarities = [...new Set(common)].join(' ');
+
+    // Find differences
+    const diff1 = words1.filter(word => !words2.includes(word));
+    const diff2 = words2.filter(word => !words1.includes(word));
+
+    file1Diff = diff1.map(word => `- ${word}`).join('\n');
+    file2Diff = diff2.map(word => `+ ${word}`).join('\n');
 
     return {
-        similarities: similarities.join(' '),
-        file1Diff: file1Diff.join('\n'),
-        file2Diff: file2Diff.join('\n'),
+        similarities: similarities,
+        file1Diff: file1Diff,
+        file2Diff: file2Diff,
         originalText1: text1,
         originalText2: text2
     };
