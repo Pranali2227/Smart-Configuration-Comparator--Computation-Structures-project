@@ -47,7 +47,7 @@ async function extractTextFromFile(file) {
                 // Resize image for faster OCR if too large
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const maxWidth = 1200; // Increased for better accuracy
+                const maxWidth = 800; // Balanced for speed and accuracy
                 const scale = Math.min(1, maxWidth / img.width);
                 canvas.width = img.width * scale;
                 canvas.height = img.height * scale;
@@ -56,11 +56,11 @@ async function extractTextFromFile(file) {
                 // Convert to blob
                 const resizedBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
 
-                // Perform OCR
+                // Perform OCR with optimized settings
                 const result = await Tesseract.recognize(resizedBlob, 'eng', {
                     logger: m => console.log(m),
-                    tessedit_pageseg_mode: Tesseract.PSM_AUTO, // Auto page segmentation
-                    tessedit_ocr_engine_mode: Tesseract.OEM_DEFAULT // Default OCR engine
+                    tessedit_pageseg_mode: Tesseract.PSM_AUTO_OSD, // Auto OSD for better detection
+                    tessedit_ocr_engine_mode: Tesseract.OEM_LSTM_ONLY // LSTM for better accuracy
                 });
                 text = result.data.text;
             } catch (ocrError) {
