@@ -5,14 +5,89 @@ function toggleTheme() {
     toggleBtn.textContent = body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
 }
 
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
+async function extractTextFromFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    let text = '';
+
+    if (ext === 'txt' || ext === 'html' || ext === 'rtf') {
+        text = await file.text();
+    } else if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            text += textContent.items.map(item => item.str).join(' ') + '\n';
+        }
+    } else if (ext === 'docx') {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+        text = result.value;
+    } else if (ext === 'xlsx' || ext === 'xls') {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        workbook.SheetNames.forEach(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            text += csv + '\n';
+        });
+    } else if (ext === 'pptx') {
+        // For PPTX, we'll use a simple text extraction (limited support)
+        text = "PPTX text extraction not fully supported in browser. Please use server-side processing.";
+    } else if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(ext)) {
+        const { data: { text: ocrText } } = await Tesseract.recognize(file, 'eng');
+        text = ocrText;
+    }
+
+    return text.trim();
+}
+
+function compareTexts(text1, text2) {
+    const words1 = text1.split(/\s+/);
+    const words2 = text2.split(/\s+/);
+    const diff = [];
+    const similarities = [];
+    const file1Diff = [];
+    const file2Diff = [];
+
+    const maxLen = Math.max(words1.length, words2.length);
+    for (let i = 0; i < maxLen; i++) {
+        const w1 = words1[i] || '';
+        const w2 = words2[i] || '';
+        if (w1 === w2 && w1 !== '') {
+            similarities.push(w1);
+            diff.push(`  ${w1}`);
+        } else {
+            if (w1) file1Diff.push(w1);
+            if (w2) file2Diff.push(w2);
+            diff.push(`- ${w1}`);
+            diff.push(`+ ${w2}`);
+        }
+    }
+
+    return {
+        similarities: similarities.join(' '),
+        file1Diff: file1Diff.join(' '),
+        file2Diff: file2Diff.join(' '),
+        diff: diff.join('\n')
+    };
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const formData = new FormData(this);
+    const file1 = document.getElementById('file1').files[0];
+    const file2 = document.getElementById('file2').files[0];
     const compareBtn = document.getElementById('compareBtn');
     const resultsDiv = document.getElementById('results');
     const errorDiv = document.getElementById('error');
     const progressContainer = document.querySelector('.progress-container');
     const progressBar = document.getElementById('progressBar');
+
+    if (!file1 || !file2) {
+        errorDiv.textContent = 'Please select both files.';
+        errorDiv.style.display = 'block';
+        return;
+    }
 
     compareBtn.disabled = true;
     compareBtn.textContent = 'Processing...';
@@ -21,74 +96,68 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
     progressContainer.style.display = 'block';
     progressBar.style.width = '0%';
 
-    // Simulate progress
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-        progress += 10;
-        if (progress <= 90) {
-            progressBar.style.width = progress + '%';
-        }
-    }, 200);
+    try {
+        // Extract text from files
+        progressBar.style.width = '25%';
+        const text1 = await extractTextFromFile(file1);
+        progressBar.style.width = '50%';
+        const text2 = await extractTextFromFile(file2);
+        progressBar.style.width = '75%';
 
-    fetch('/compare', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        clearInterval(progressInterval);
+        // Compare texts
+        const comparison = compareTexts(text1, text2);
         progressBar.style.width = '100%';
+
         setTimeout(() => {
             progressContainer.style.display = 'none';
-            if (data.error) {
-                errorDiv.textContent = data.error;
-                errorDiv.style.display = 'block';
-            } else {
-                const file1ContentDiv = document.getElementById('file1_content');
-                const file2ContentDiv = document.getElementById('file2_content');
-                file1ContentDiv.innerHTML = '';
-                file2ContentDiv.innerHTML = '';
-                if (data.file1_url) {
-                    const img1 = document.createElement('img');
-                    img1.src = data.file1_url;
-                    img1.style.width = '100%';
-                    img1.style.height = 'auto';
-                    file1ContentDiv.appendChild(img1);
-                }
-                const pre1 = document.createElement('pre');
-                pre1.textContent = data.file1_content;
-                file1ContentDiv.appendChild(pre1);
-                if (data.file2_url) {
-                    const img2 = document.createElement('img');
-                    img2.src = data.file2_url;
-                    img2.style.width = '100%';
-                    img2.style.height = 'auto';
-                    file2ContentDiv.appendChild(img2);
-                }
-                const pre2 = document.createElement('pre');
-                pre2.textContent = data.file2_content;
-                file2ContentDiv.appendChild(pre2);
-                document.getElementById('similarities').innerHTML = '<pre>' + data.similarities + '</pre>';
-                document.getElementById('file1_diff').innerHTML = '<pre>' + data.file1_diff + '</pre>';
-                document.getElementById('file2_diff').innerHTML = '<pre>' + data.file2_diff + '</pre>';
-                resultsDiv.style.display = 'block';
-                document.getElementById('compareAgainBtn').style.display = 'block';
-                setTimeout(() => {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                }, 100);
+
+            // Display results
+            const file1ContentDiv = document.getElementById('file1_content');
+            const file2ContentDiv = document.getElementById('file2_content');
+            file1ContentDiv.innerHTML = '';
+            file2ContentDiv.innerHTML = '';
+
+            if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file1.name.split('.').pop().toLowerCase())) {
+                const img1 = document.createElement('img');
+                img1.src = URL.createObjectURL(file1);
+                img1.style.width = '100%';
+                img1.style.height = 'auto';
+                file1ContentDiv.appendChild(img1);
             }
+            const pre1 = document.createElement('pre');
+            pre1.textContent = text1;
+            file1ContentDiv.appendChild(pre1);
+
+            if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file2.name.split('.').pop().toLowerCase())) {
+                const img2 = document.createElement('img');
+                img2.src = URL.createObjectURL(file2);
+                img2.style.width = '100%';
+                img2.style.height = 'auto';
+                file2ContentDiv.appendChild(img2);
+            }
+            const pre2 = document.createElement('pre');
+            pre2.textContent = text2;
+            file2ContentDiv.appendChild(pre2);
+
+            document.getElementById('similarities').innerHTML = '<pre>' + comparison.similarities + '</pre>';
+            document.getElementById('file1_diff').innerHTML = '<pre>' + comparison.file1Diff + '</pre>';
+            document.getElementById('file2_diff').innerHTML = '<pre>' + comparison.file2Diff + '</pre>';
+
+            resultsDiv.style.display = 'block';
+            document.getElementById('compareAgainBtn').style.display = 'block';
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
         }, 500);
-    })
-    .catch(error => {
-        clearInterval(progressInterval);
+
+    } catch (error) {
         progressContainer.style.display = 'none';
         errorDiv.textContent = 'An error occurred: ' + error.message;
         errorDiv.style.display = 'block';
-    })
-    .finally(() => {
+    } finally {
         compareBtn.disabled = false;
         compareBtn.textContent = 'Generate Comparison';
-    });
+    }
 });
 
 document.getElementById('compareAgainBtn').addEventListener('click', function() {
