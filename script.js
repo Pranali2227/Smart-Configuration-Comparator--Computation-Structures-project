@@ -75,16 +75,16 @@ async function extractTextFromFile(file) {
 }
 
 function compareTexts(text1, text2) {
-    // Normalize text: convert to lowercase, trim, and remove extra spaces
+    // Normalize text: convert to lowercase for case-insensitive comparison
     const normalize = (text) => text.toLowerCase().trim().replace(/\s+/g, ' ');
     const normText1 = normalize(text1);
     const normText2 = normalize(text2);
 
-    // Simple word-based comparison
+    // Split into words
     const words1 = normText1.split(/\s+/);
     const words2 = normText2.split(/\s+/);
 
-    // Find common words
+    // Find similarities (common words)
     const common = words1.filter(word => words2.includes(word));
     const similarities = [...new Set(common)].join(' ');
 
@@ -92,14 +92,13 @@ function compareTexts(text1, text2) {
     const diff1 = words1.filter(word => !words2.includes(word));
     const diff2 = words2.filter(word => !words1.includes(word));
 
-    const differences = [
-        ...diff1.map(word => `- ${word}`),
-        ...diff2.map(word => `+ ${word}`)
-    ].join('\n');
+    const file1Diff = diff1.map(word => `- ${word}`).join('\n');
+    const file2Diff = diff2.map(word => `+ ${word}`).join('\n');
 
     return {
         similarities: similarities,
-        differences: differences,
+        file1Diff: file1Diff,
+        file2Diff: file2Diff,
         originalText1: text1,
         originalText2: text2
     };
@@ -172,7 +171,8 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             file2ContentDiv.appendChild(pre2);
 
             document.getElementById('similarities').innerHTML = '<pre>' + comparison.similarities + '</pre>';
-            document.getElementById('differences').innerHTML = '<pre>' + comparison.differences + '</pre>';
+            document.getElementById('file1_diff').innerHTML = '<pre>' + comparison.file1Diff + '</pre>';
+            document.getElementById('file2_diff').innerHTML = '<pre>' + comparison.file2Diff + '</pre>';
 
             resultsDiv.style.display = 'block';
             document.getElementById('compareAgainBtn').style.display = 'block';

@@ -52,27 +52,37 @@ def extract_text_from_file(file_path, file_ext):
     return text.strip()
 
 def compare_texts(text1, text2):
-    words1 = text1.split()
-    words2 = text2.split()
-    diff = list(difflib.ndiff(words1, words2))
-    similarities = []
-    file1_diff = []
-    file2_diff = []
-    for line in diff:
-        if line.startswith('  '):
-            similarities.append(line[2:])
-        elif line.startswith('- '):
-            file1_diff.append(line[2:])
-        elif line.startswith('+ '):
-            file2_diff.append(line[2:])
-    similarities = ' '.join(similarities)
-    file1_diff = ' '.join(file1_diff)
-    file2_diff = ' '.join(file2_diff)
+    # Normalize text: convert to lowercase for case-insensitive comparison
+    normalize = lambda text: text.lower().strip().replace('\s+', ' ')
+    norm_text1 = normalize(text1)
+    norm_text2 = normalize(text2)
+
+    # Simple word-based comparison
+    words1 = norm_text1.split()
+    words2 = norm_text2.split()
+
+    # Find common words
+    common = list(set(words1) & set(words2))
+    similarities = ' '.join(common)
+
+    # Find differences
+    diff1 = [word for word in words1 if word not in words2]
+    diff2 = [word for word in words2 if word not in words1]
+
+    file1_diff = '\n'.join(f'- {word}' for word in diff1)
+    file2_diff = '\n'.join(f'+ {word}' for word in diff2)
+
     return similarities, file1_diff, file2_diff
 
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    if filename.startswith('static/'):
+        return send_from_directory('static', filename[7:])
+    return send_from_directory('.', filename)
 
 @app.route('/compare', methods=['POST'])
 def compare():
