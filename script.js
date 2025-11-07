@@ -9,34 +9,49 @@ async function extractTextFromFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
     let text = '';
 
-    if (ext === 'txt' || ext === 'html' || ext === 'rtf') {
-        text = await file.text();
-    } else if (ext === 'pdf') {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            text += textContent.items.map(item => item.str).join(' ') + '\n';
+    try {
+        if (ext === 'txt' || ext === 'html' || ext === 'rtf') {
+            text = await file.text();
+        } else if (ext === 'pdf') {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { // Limit to first 10 pages for speed
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                text += textContent.items.map(item => item.str).join(' ') + '\n';
+            }
+        } else if (ext === 'docx') {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+            text = result.value;
+        } else if (ext === 'xlsx' || ext === 'xls') {
+            const arrayBuffer = await file.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+            workbook.SheetNames.forEach(sheetName => {
+                const worksheet = workbook.Sheets[sheetName];
+                const csv = XLSX.utils.sheet_to_csv(worksheet);
+                text += csv + '\n';
+            });
+        } else if (ext === 'pptx') {
+            text = "PPTX text extraction not fully supported in browser. Please use server-side processing.";
+        } else if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(ext)) {
+            // Resize image for faster OCR
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await new Promise(resolve => img.onload = resolve);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const maxWidth = 800;
+            const scale = Math.min(1, maxWidth / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const resizedFile = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+            const { data: { text: ocrText } } = await Tesseract.recognize(resizedFile, 'eng', { logger: m => console.log(m) });
+            text = ocrText;
         }
-    } else if (ext === 'docx') {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
-        text = result.value;
-    } else if (ext === 'xlsx' || ext === 'xls') {
-        const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
-        workbook.SheetNames.forEach(sheetName => {
-            const worksheet = workbook.Sheets[sheetName];
-            const csv = XLSX.utils.sheet_to_csv(worksheet);
-            text += csv + '\n';
-        });
-    } else if (ext === 'pptx') {
-        // For PPTX, we'll use a simple text extraction (limited support)
-        text = "PPTX text extraction not fully supported in browser. Please use server-side processing.";
-    } else if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(ext)) {
-        const { data: { text: ocrText } } = await Tesseract.recognize(file, 'eng');
-        text = ocrText;
+    } catch (error) {
+        text = `Error extracting text: ${error.message}`;
     }
 
     return text.trim();
