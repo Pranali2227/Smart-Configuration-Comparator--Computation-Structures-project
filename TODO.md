@@ -4,5 +4,5 @@
 - [x] Create Procfile for Heroku
 - [x] Install Heroku CLI
 - [x] Create Heroku app
-- [ ] Push code to Heroku
-- [ ] Test deployed app
+- [x] Push code to Heroku
+- [x] Test deployed app
