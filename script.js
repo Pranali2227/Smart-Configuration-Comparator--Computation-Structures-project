@@ -84,13 +84,14 @@ function compareTexts(text1, text2) {
     const patches = Diff.diffWords(normText1, normText2);
 
     let similarities = [];
-    let differences = [];
+    let file1Diff = [];
+    let file2Diff = [];
 
     patches.forEach(patch => {
         if (patch.added) {
-            differences.push(`+ ${patch.value.trim()}`);
+            file2Diff.push(`+ ${patch.value.trim()}`);
         } else if (patch.removed) {
-            differences.push(`- ${patch.value.trim()}`);
+            file1Diff.push(`- ${patch.value.trim()}`);
         } else {
             similarities.push(patch.value.trim());
         }
@@ -98,7 +99,8 @@ function compareTexts(text1, text2) {
 
     return {
         similarities: similarities.join(' '),
-        differences: differences.join('\n'),
+        file1Diff: file1Diff.join('\n'),
+        file2Diff: file2Diff.join('\n'),
         originalText1: text1,
         originalText2: text2
     };
@@ -171,7 +173,8 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             file2ContentDiv.appendChild(pre2);
 
             document.getElementById('similarities').innerHTML = '<pre>' + comparison.similarities + '</pre>';
-            document.getElementById('differences').innerHTML = '<pre>' + comparison.differences + '</pre>';
+            document.getElementById('file1_diff').innerHTML = '<pre>' + comparison.file1Diff + '</pre>';
+            document.getElementById('file2_diff').innerHTML = '<pre>' + comparison.file2Diff + '</pre>';
 
             resultsDiv.style.display = 'block';
             document.getElementById('compareAgainBtn').style.display = 'block';
