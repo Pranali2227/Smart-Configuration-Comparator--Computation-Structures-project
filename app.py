@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, send_from_directory, jsonify
 import os
 import tempfile
 import difflib
@@ -93,8 +93,8 @@ def compare():
         text1 = extract_text_from_file(file1_path, ext1)
         text2 = extract_text_from_file(file2_path, ext2)
         similarities, file1_diff, file2_diff = compare_texts(text1, text2)
-        file1_url = f"/{file1_path}" if ext1 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
-        file2_url = f"/{file2_path}" if ext2 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
+        file1_url = f"/static/uploads/{file1.filename}" if ext1 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
+        file2_url = f"/static/uploads/{file2.filename}" if ext2 in ['.png', '.jpg', '.jpeg', '.bmp', '.tiff'] else None
         return jsonify({
             'file1_content': text1,
             'file2_content': text2,
