@@ -1,0 +1,217 @@
+:root {
+  --bg1: #d9fdd3;
+  --bg2: #c0f3ce;
+  --text: #2e3d2f;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --accent: #2a623d;
+  --border: rgba(255, 255, 255, 0.6);
+  --progress: linear-gradient(90deg, #85e085, #7cd67f, #9fffa4);
+}
+
+body.dark {
+  --bg1: #1b1f1b;
+  --bg2: #2a3d2a;
+  --text: #e8ffe8;
+  --card-bg: rgba(34, 45, 34, 0.9);
+  --accent: #9df4a0;
+  --border: rgba(100, 150, 100, 0.4);
+  --progress: linear-gradient(90deg, #6adb80, #56c26b, #89ff9e);
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  color: var(--text);
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.container {
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(100, 150, 100, 0.3);
+  padding: 40px 50px;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  width: 90%;
+  max-width: 500px;
+  border: 1px solid var(--border);
+  transition: all 0.5s ease;
+}
+
+h1 {
+  font-size: 1.8rem;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+p {
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 25px;
+}
+
+.upload-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: 0.3s ease;
+}
+
+.upload-box:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.03);
+}
+
+input[type="file"] {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  margin-top: 10px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+button {
+  background: linear-gradient(90deg, #a8e6a1, #9de79a);
+  border: none;
+  color: #1f361f;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+body.dark button {
+  background: linear-gradient(90deg, #6adb80, #56c26b);
+  color: #e8ffe8;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+/* Progress bar */
+.progress-container {
+  display: none;
+  width: 100%;
+  background: rgba(227, 247, 225, 0.3);
+  border-radius: 8px;
+  margin-top: 20px;
+  height: 18px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--progress);
+  box-shadow: 0 0 10px #85e085;
+  border-radius: 8px;
+  transition: width 0.3s ease-in-out;
+  animation: glowPulse 1.5s infinite alternate;
+}
+
+@keyframes glowPulse {
+  from { box-shadow: 0 0 8px #94e494; }
+  to { box-shadow: 0 0 18px #a8f3a8; }
+}
+
+#results {
+  display: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 25px;
+  text-align: left;
+  animation: fadeIn 0.6s ease-in-out;
+  border: 1px solid var(--border);
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(10px);}
+  to {opacity: 1; transform: translateY(0);}
+}
+
+#results h2 {
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.result-line {
+  font-size: 0.95rem;
+  margin: 5px 0;
+  padding: 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 4px solid var(--accent);
+}
+
+body:not(.dark) .result-line {
+  background: #17a647;
+  color: white;
+}
+
+#error {
+  color: red;
+}
+
+/* Theme Toggle */
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 25px;
+  padding: 8px 15px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.4s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--accent);
+  color: white;
+}
+
+#compareAgainBtn {
+  display: block;
+  margin: 20px auto 0;
+  background: linear-gradient(90deg, #a8e6a1, #9de79a);
+  border: none;
+  color: #1f361f;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+body.dark #compareAgainBtn {
+  background: linear-gradient(90deg, #6adb80, #56c26b);
+  color: #e8ffe8;
+}
+
+#compareAgainBtn:hover {
+  transform: translateY(-2px);
+}
