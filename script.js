@@ -84,25 +84,22 @@ function compareTexts(text1, text2) {
     const words1 = normText1.split(/\s+/);
     const words2 = normText2.split(/\s+/);
 
-    let similarities = [];
-    let file1Diff = [];
-    let file2Diff = [];
-
     // Find common words
     const common = words1.filter(word => words2.includes(word));
-    similarities = [...new Set(common)].join(' ');
+    const similarities = [...new Set(common)].join(' ');
 
     // Find differences
     const diff1 = words1.filter(word => !words2.includes(word));
     const diff2 = words2.filter(word => !words1.includes(word));
 
-    file1Diff = diff1.map(word => `- ${word}`).join('\n');
-    file2Diff = diff2.map(word => `+ ${word}`).join('\n');
+    const differences = [
+        ...diff1.map(word => `- ${word}`),
+        ...diff2.map(word => `+ ${word}`)
+    ].join('\n');
 
     return {
         similarities: similarities,
-        file1Diff: file1Diff,
-        file2Diff: file2Diff,
+        differences: differences,
         originalText1: text1,
         originalText2: text2
     };
@@ -175,8 +172,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             file2ContentDiv.appendChild(pre2);
 
             document.getElementById('similarities').innerHTML = '<pre>' + comparison.similarities + '</pre>';
-            document.getElementById('file1_diff').innerHTML = '<pre>' + comparison.file1Diff + '</pre>';
-            document.getElementById('file2_diff').innerHTML = '<pre>' + comparison.file2Diff + '</pre>';
+            document.getElementById('differences').innerHTML = '<pre>' + comparison.differences + '</pre>';
 
             resultsDiv.style.display = 'block';
             document.getElementById('compareAgainBtn').style.display = 'block';
