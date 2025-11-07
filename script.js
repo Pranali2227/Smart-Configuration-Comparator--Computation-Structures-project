@@ -80,25 +80,19 @@ function compareTexts(text1, text2) {
     const normText1 = normalize(text1);
     const normText2 = normalize(text2);
 
-    // Use difflib for better diff
-    const d = new difflib.SequenceMatcher(null, normText1.split(/\s+/), normText2.split(/\s+/));
-    const diff = d.get_opcodes();
+    // Use diff library for better diff
+    const patches = Diff.diffWords(normText1, normText2);
 
     let similarities = [];
     let differences = [];
 
-    diff.forEach(([tag, i1, i2, j1, j2]) => {
-        const seq1 = normText1.split(/\s+/).slice(i1, i2).join(' ');
-        const seq2 = normText2.split(/\s+/).slice(j1, j2).join(' ');
-        if (tag === 'equal') {
-            similarities.push(seq1);
-        } else if (tag === 'replace') {
-            differences.push(`- ${seq1}`);
-            differences.push(`+ ${seq2}`);
-        } else if (tag === 'delete') {
-            differences.push(`- ${seq1}`);
-        } else if (tag === 'insert') {
-            differences.push(`+ ${seq2}`);
+    patches.forEach(patch => {
+        if (patch.added) {
+            differences.push(`+ ${patch.value.trim()}`);
+        } else if (patch.removed) {
+            differences.push(`- ${patch.value.trim()}`);
+        } else {
+            similarities.push(patch.value.trim());
         }
     });
 
