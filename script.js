@@ -15,7 +15,7 @@ async function extractTextFromFile(file) {
         } else if (ext === 'pdf') {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { // Limit to first 10 pages for speed
+            for (let i = 1; i <= pdf.numPages; i++) { // Extract all pages
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
                 text += textContent.items.map(item => item.str).join(' ') + '\n';
@@ -75,33 +75,38 @@ async function extractTextFromFile(file) {
 }
 
 function compareTexts(text1, text2) {
-    const words1 = text1.split(/\s+/);
-    const words2 = text2.split(/\s+/);
-    const diff = [];
-    const similarities = [];
-    const file1Diff = [];
-    const file2Diff = [];
+    // Normalize text: convert to lowercase, trim, and remove extra spaces
+    const normalize = (text) => text.toLowerCase().trim().replace(/\s+/g, ' ');
+    const normText1 = normalize(text1);
+    const normText2 = normalize(text2);
 
-    const maxLen = Math.max(words1.length, words2.length);
-    for (let i = 0; i < maxLen; i++) {
-        const w1 = words1[i] || '';
-        const w2 = words2[i] || '';
-        if (w1 === w2 && w1 !== '') {
-            similarities.push(w1);
-            diff.push(`  ${w1}`);
-        } else {
-            if (w1) file1Diff.push(w1);
-            if (w2) file2Diff.push(w2);
-            diff.push(`- ${w1}`);
-            diff.push(`+ ${w2}`);
+    // Use difflib for better diff
+    const d = new difflib.SequenceMatcher(null, normText1.split(/\s+/), normText2.split(/\s+/));
+    const diff = d.get_opcodes();
+
+    let similarities = [];
+    let differences = [];
+
+    diff.forEach(([tag, i1, i2, j1, j2]) => {
+        const seq1 = normText1.split(/\s+/).slice(i1, i2).join(' ');
+        const seq2 = normText2.split(/\s+/).slice(j1, j2).join(' ');
+        if (tag === 'equal') {
+            similarities.push(seq1);
+        } else if (tag === 'replace') {
+            differences.push(`- ${seq1}`);
+            differences.push(`+ ${seq2}`);
+        } else if (tag === 'delete') {
+            differences.push(`- ${seq1}`);
+        } else if (tag === 'insert') {
+            differences.push(`+ ${seq2}`);
         }
-    }
+    });
 
     return {
         similarities: similarities.join(' '),
-        file1Diff: file1Diff.join(' '),
-        file2Diff: file2Diff.join(' '),
-        diff: diff.join('\n')
+        differences: differences.join('\n'),
+        originalText1: text1,
+        originalText2: text2
     };
 }
 
@@ -152,7 +157,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file1.name.split('.').pop().toLowerCase())) {
                 const img1 = document.createElement('img');
                 img1.src = URL.createObjectURL(file1);
-                img1.style.width = '100%';
+                img1.style.maxWidth = '300px';
                 img1.style.height = 'auto';
                 file1ContentDiv.appendChild(img1);
             }
@@ -163,7 +168,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             if (['png', 'jpg', 'jpeg', 'bmp', 'tiff'].includes(file2.name.split('.').pop().toLowerCase())) {
                 const img2 = document.createElement('img');
                 img2.src = URL.createObjectURL(file2);
-                img2.style.width = '100%';
+                img2.style.maxWidth = '300px';
                 img2.style.height = 'auto';
                 file2ContentDiv.appendChild(img2);
             }
@@ -172,8 +177,7 @@ document.getElementById('uploadForm').addEventListener('submit', async function(
             file2ContentDiv.appendChild(pre2);
 
             document.getElementById('similarities').innerHTML = '<pre>' + comparison.similarities + '</pre>';
-            document.getElementById('file1_diff').innerHTML = '<pre>' + comparison.file1Diff + '</pre>';
-            document.getElementById('file2_diff').innerHTML = '<pre>' + comparison.file2Diff + '</pre>';
+            document.getElementById('differences').innerHTML = '<pre>' + comparison.differences + '</pre>';
 
             resultsDiv.style.display = 'block';
             document.getElementById('compareAgainBtn').style.display = 'block';
